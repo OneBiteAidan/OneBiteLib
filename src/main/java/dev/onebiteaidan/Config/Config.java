@@ -8,8 +8,6 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
-import static it.unimi.dsi.fastutil.io.FastBufferedOutputStream.DEFAULT_BUFFER_SIZE;
-
 public class Config {
 
     private final Plugin plugin;
@@ -52,11 +50,10 @@ public class Config {
                 plugin.saveResource(fileName, false);
             } else {
                 try {
-                    // Create empty file
+                    // Create an empty file
                     file.createNewFile();
                 } catch (IOException e) {
-                    plugin.getLogger().severe("Failed to create " + file.getAbsolutePath());
-                    e.printStackTrace();
+                    plugin.getLogger().severe("Failed to create " + file.getAbsolutePath() + ": " + e.getMessage());
                 }
             }
         }
