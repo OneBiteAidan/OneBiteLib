@@ -4,74 +4,128 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.Plugin;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import static it.unimi.dsi.fastutil.io.FastBufferedOutputStream.DEFAULT_BUFFER_SIZE;
 
 public class Config {
 
-    protected final boolean createIfNotExist, resource;
-    protected final Plugin plugin;
-    protected static FileConfiguration config;
-    protected File file, path;
-    protected String name;
+    private final Plugin plugin;
+    private final File folder;                  // Usually plugin.getDataFolder() or a subfolder
+    private final String fileName;              // must include ".yml"
+    private final boolean createIfMissing;
+    private final boolean hasResourceDefault;   // True if a default configuration with the same name exists in /resources
+
+    private File file;
+    private YamlConfiguration config;
 
     /**
-     * Config Constructor
-     * @param instance Main plugin instance
-     * @param path Filepath to store the config file in (typically in: this.getDataFolder())
-     * @param name Name of the config file (.yml will be appended to the filename on creation)
-     * @param createIfNotExist Creates the file if it doesn't exist
-     * @param resource This is true if the config file is placed in the resources folder of the project
+     * @param plugin                your JavaPlugin
+     * @param folder                where to place the file (e.g. plugin.getDataFolder())
+     * @param baseNameNoExt         config base name; ".yml" will be appended
+     * @param createIfMissing       create file if missing
+     * @param hasResourceDefault    if true, copy defaults from plugin resources on first run
      */
-    public Config(Plugin instance, File path, String name, boolean createIfNotExist, boolean resource) {
-        this.plugin = instance;
-        this.path = path;
-        this.name = name + ".yml";
-        this.createIfNotExist = createIfNotExist;
-        this.resource = resource;
+    public Config(Plugin plugin,
+                  File folder,
+                  String baseNameNoExt,
+                  boolean createIfMissing,
+                  boolean hasResourceDefault) {
+        this.plugin = Objects.requireNonNull(plugin, "plugin");
+        this.folder = Objects.requireNonNull(folder, "folder");
+        this.fileName = (baseNameNoExt.endsWith(".yml") ? baseNameNoExt : baseNameNoExt + ".yml");
+        this.createIfMissing = createIfMissing;
+        this.hasResourceDefault = hasResourceDefault;
+    }
 
-        file = new File(path.getAbsolutePath() + File.separator + this.name);
+    public synchronized void init() {
+        if (!folder.exists()) {
+            folder.mkdirs();
+        }
+        file = new File(folder, fileName);
 
-        if (!file.exists()) {
-            try {
-                copyInputStreamToFile(Objects.requireNonNull(plugin.getResource(this.name)), file);
-            } catch(IOException e) {
-                e.printStackTrace();
+        if (!file.exists() && createIfMissing) {
+            if (hasResourceDefault && plugin.getResource(fileName) != null) {
+                // Copies from /resources while preserving if file exists
+                plugin.saveResource(fileName, false);
+            } else {
+                try {
+                    // Create empty file
+                    file.createNewFile();
+                } catch (IOException e) {
+                    plugin.getLogger().severe("Failed to create " + file.getAbsolutePath());
+                    e.printStackTrace();
+                }
             }
         }
 
+        // Load user config
         config = YamlConfiguration.loadConfiguration(file);
-    }
 
-    // Grabbed this function from: https://mkyong.com/java/how-to-convert-inputstream-to-file-in-java/
-    private static void copyInputStreamToFile(InputStream inputStream, File file)
-            throws IOException {
-
-        // append = false
-        try (FileOutputStream outputStream = new FileOutputStream(file, false)) {
-            int read;
-            byte[] bytes = new byte[DEFAULT_BUFFER_SIZE];
-            while ((read = inputStream.read(bytes)) != -1) {
-                outputStream.write(bytes, 0, read);
+        // If we have a bundled default, set it as default so copyDefaults works
+        if (hasResourceDefault) {
+            try (InputStream in = plugin.getResource(fileName)) {
+                if (in != null) {
+                    try (InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+                        YamlConfiguration defaults = YamlConfiguration.loadConfiguration(reader);
+                        config.setDefaults(defaults);
+                        // If you want missing keys to be written out to disk:
+                        config.options().copyDefaults(true);
+                        save(); // write defaults that weren't in the file
+                    }
+                }
+            } catch (IOException e) {
+                plugin.getLogger().warning("Unable to load defaults for " + fileName + ": " + e.getMessage());
             }
         }
     }
 
-    public FileConfiguration getConfig() {
+    /**
+     * Reload from disk (keeps default if present).
+     */
+    public synchronized void reload() {
+        if (file == null) init(); // lazy init
+        YamlConfiguration fresh = YamlConfiguration.loadConfiguration(file);
+        if (config != null && config.getDefaults() != null) {
+            fresh.setDefaults(config.getDefaults());
+            fresh.options().copyDefaults(config.options().copyDefaults());
+        }
+        config = fresh;
+    }
+
+    /**
+     * Save to disk
+     */
+    public synchronized void save() {
+        if (file == null || config == null) return;
+        try {
+            config.save(file);
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save " + file.getAbsolutePath() + ": " + e.getMessage());
+        }
+    }
+
+    public synchronized FileConfiguration getConfig() {
+        if (config == null) init();
         return config;
     }
 
-
-    //region Getters, variables and constructors
-
-    public FileConfiguration reloadConfig() {
-        config = YamlConfiguration.loadConfiguration(file);
-        return config;
+    public synchronized File getFile() {
+        if (file == null) init();
+        return file;
     }
-    //endregion
+
+    // Convenience getters (So you don't have to call <ConfigObject>.getConfig.getString(path))
+    public String getString(String path)    { return getConfig().getString(path); }
+    public int getInt(String path)          { return getConfig().getInt(path); }
+    public boolean getBoolean(String path)  { return getConfig().getBoolean(path); }
+    public double getDouble(String path)    { return getConfig().getDouble(path); }
+
+    // Convenience getters with defaults
+    public String getString(String path, String def)      { return getConfig().getString(path, def); }
+    public int getInt(String path, int def)               { return getConfig().getInt(path, def); }
+    public boolean getBoolean(String path, boolean def)   { return getConfig().getBoolean(path, def); }
+    public double getDouble(String path, double def)      { return getConfig().getDouble(path, def); }
 }
