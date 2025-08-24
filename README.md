@@ -11,7 +11,7 @@ A library containing commonly used utilities inside of my Minecraft plugins deve
 ## Installation
 ### Maven
 Add the OneBitLib repository to your project's pom.xml
-```yaml
+```xml
 	<repositories>
 		<repository>
 		    <id>jitpack.io</id>
@@ -21,7 +21,7 @@ Add the OneBitLib repository to your project's pom.xml
 ```
 
 Add OneBiteLib as a dependency in the project's pom.xml
-```yaml
+```xml
 	<dependency>
 	    <groupId>com.github.OneBiteAidan</groupId>
 	    <artifactId>OneBiteLib</artifactId>
@@ -31,7 +31,7 @@ Add OneBiteLib as a dependency in the project's pom.xml
 
 ### Gradle
 Add JitPack to your root settings.gradle at the end of the repositories:
-```json
+```groovy
 	dependencyResolutionManagement {
 		repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 		repositories {
@@ -41,7 +41,7 @@ Add JitPack to your root settings.gradle at the end of the repositories:
 	}
 ```
 And then add OneBiteLib as a dependency:
-```json
+```groovy
 	dependencies {
 	        implementation 'com.github.OneBiteAidan:OneBiteLib:v1.0.0'
 	}
