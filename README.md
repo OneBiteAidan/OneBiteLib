@@ -7,6 +7,7 @@ A library containing commonly used utilities inside of my Minecraft plugins deve
   - [Gradle](#gradle)
 - Package Documentation
   - [Config](./src/main/java/dev/onebiteaidan/Config/README.md)
+  - [Repository](./src/main/java/dev/onebiteaidan/Repository/README.md)
 
 ## Installation
 ### Maven
