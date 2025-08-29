@@ -44,6 +44,12 @@ public class Config {
         }
         file = new File(folder, fileName);
 
+        // Ensure any subfolders exist
+        File parent = file.getParentFile();
+        if (parent != null && !parent.exists()) {
+            parent.mkdirs();
+        }
+
         if (!file.exists() && createIfMissing) {
             if (hasResourceDefault && plugin.getResource(fileName) != null) {
                 // Copies from /resources while preserving if file exists
