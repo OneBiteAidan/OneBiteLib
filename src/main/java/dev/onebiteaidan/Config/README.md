@@ -28,6 +28,10 @@ public void onEnable() {
 
 The above example sets up a configuration file, "config.yml", inside the plugin's data folder under the sub-directory, "subdirectory".
 
+When using a subdirectory, be sure to match your plugin's datafolder structure inside of your plugin's resources folder like so:
+
+![img.png](img.png)
+
 NOTE: The config class handle's adding the .yml if it is not present so the file could alternatively be named "config.yml" and Config.java would handle that accordingly.
 
 ### Accessing Config Attributes
