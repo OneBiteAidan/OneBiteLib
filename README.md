@@ -26,7 +26,7 @@ Add OneBiteLib as a dependency in the project's pom.xml
 	<dependency>
 	    <groupId>com.github.OneBiteAidan</groupId>
 	    <artifactId>OneBiteLib</artifactId>
-	    <version>v1.0.0</version>
+	    <version>v1.0.1</version>
 	</dependency>
 ```
 
